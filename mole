@@ -22,7 +22,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
 
 # Version info
-VERSION="1.9.1"
+VERSION="1.9.2"
 MOLE_TAGLINE="can dig deep to clean your Mac."
 
 # Get latest version from remote repository
