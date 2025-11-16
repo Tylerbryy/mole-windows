@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	maxEntries            = 20
-	maxLargeFiles         = 20
+	maxEntries            = 30
+	maxLargeFiles         = 30
 	barWidth              = 24
 	minLargeFileSize      = 100 << 20 // 100 MB
 	entryViewport         = 10
@@ -141,6 +141,13 @@ var foldDirs = map[string]bool{
 	".sdkman":         true, // SDK manager
 	".nvm":            true, // Node version manager
 
+	// macOS specific
+	"Application Scripts": true, // macOS sandboxed app scripts (can have many subdirs)
+	"Saved Application State": true, // App state snapshots
+
+	// iCloud
+	"Mobile Documents": true, // iCloud Drive - avoid triggering downloads
+
 	// Docker & Containers
 	".docker":     true,
 	".containerd": true,
@@ -222,7 +229,8 @@ var skipExtensions = map[string]bool{
 	".svg":   true,
 }
 
-var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"}
+// Classic visible spinner
+var spinnerFrames = []string{"|", "/", "-", "\\", "|", "/", "-", "\\"}
 
 // Global singleflight group to avoid duplicate scans of the same path
 var scanGroup singleflight.Group
@@ -1065,18 +1073,21 @@ func (m model) View() string {
 			for idx := start; idx < end; idx++ {
 				file := m.largeFiles[idx]
 				shortPath := displayPath(file.path)
-				shortPath = truncateMiddle(shortPath, 56)
+				shortPath = truncateMiddle(shortPath, 35)
 				entryPrefix := "    "
 				nameColor := ""
+				sizeColor := colorGray
+				numColor := ""
 				if idx == m.largeSelected {
 					entryPrefix = fmt.Sprintf(" %s%s▶%s  ", colorCyan, colorBold, colorReset)
-					nameColor = colorCyan  // Highlight filename with cyan
+					nameColor = colorCyan
+					sizeColor = colorCyan
+					numColor = colorCyan
 				}
-				nameColumn := padName(shortPath, 56)
 				size := humanizeBytes(file.size)
 				bar := coloredProgressBar(file.size, maxLargeSize, 0)
-				fmt.Fprintf(&b, "%s%2d. %s  |  📄 %s%s%s %s%10s%s\n",
-					entryPrefix, idx+1, bar, nameColor, nameColumn, colorReset, colorGray, size, colorReset)
+				fmt.Fprintf(&b, "%s%s%2d.%s %s  |  📄 %s%s%s  %s%10s%s\n",
+					entryPrefix, numColor, idx+1, colorReset, bar, nameColor, shortPath, colorReset, sizeColor, size, colorReset)
 			}
 		}
 	} else {
@@ -1130,9 +1141,14 @@ func (m model) View() string {
 					name := trimName(entry.name)
 					paddedName := padName(name, 28)
 					nameSegment := fmt.Sprintf("%s %s", icon, paddedName)
+					numColor := ""
+					percentColor := ""
 					if idx == m.selected {
 						entryPrefix = fmt.Sprintf(" %s%s▶%s  ", colorCyan, colorBold, colorReset)
 						nameSegment = fmt.Sprintf("%s%s %s%s", colorCyan, icon, paddedName, colorReset)
+						numColor = colorCyan
+						percentColor = colorCyan
+						sizeColor = colorCyan
 					}
 					displayIndex := idx + 1
 
@@ -1146,12 +1162,12 @@ func (m model) View() string {
 					}
 					unusedLabel := formatUnusedTime(lastAccess)
 					if unusedLabel == "" {
-						fmt.Fprintf(&b, "%s%2d. %s %s  |  %s %s%10s%s\n",
-							entryPrefix, displayIndex, bar, percentStr,
+						fmt.Fprintf(&b, "%s%s%2d.%s %s %s%s%s  |  %s %s%10s%s\n",
+							entryPrefix, numColor, displayIndex, colorReset, bar, percentColor, percentStr, colorReset,
 							nameSegment, sizeColor, sizeText, colorReset)
 					} else {
-						fmt.Fprintf(&b, "%s%2d. %s %s  |  %s %s%10s%s  %s%s%s\n",
-							entryPrefix, displayIndex, bar, percentStr,
+						fmt.Fprintf(&b, "%s%s%2d.%s %s %s%s%s  |  %s %s%10s%s  %s%s%s\n",
+							entryPrefix, numColor, displayIndex, colorReset, bar, percentColor, percentStr, colorReset,
 							nameSegment, sizeColor, sizeText, colorReset,
 							colorGray, unusedLabel, colorReset)
 					}
@@ -1206,9 +1222,14 @@ func (m model) View() string {
 					// Keep chart columns aligned even when arrow is shown
 					entryPrefix := "    "
 					nameSegment := fmt.Sprintf("%s %s", icon, paddedName)
+					numColor := ""
+					percentColor := ""
 					if idx == m.selected {
 						entryPrefix = fmt.Sprintf(" %s%s▶%s  ", colorCyan, colorBold, colorReset)
 						nameSegment = fmt.Sprintf("%s%s %s%s", colorCyan, icon, paddedName, colorReset)
+						numColor = colorCyan
+						percentColor = colorCyan
+						sizeColor = colorCyan
 					}
 
 					displayIndex := idx + 1
@@ -1216,12 +1237,12 @@ func (m model) View() string {
 					// Add unused time label if applicable
 					unusedLabel := formatUnusedTime(entry.lastAccess)
 					if unusedLabel == "" {
-						fmt.Fprintf(&b, "%s%2d. %s %s  |  %s %s%10s%s\n",
-							entryPrefix, displayIndex, bar, percentStr,
+						fmt.Fprintf(&b, "%s%s%2d.%s %s %s%s%s  |  %s %s%10s%s\n",
+							entryPrefix, numColor, displayIndex, colorReset, bar, percentColor, percentStr, colorReset,
 							nameSegment, sizeColor, size, colorReset)
 					} else {
-						fmt.Fprintf(&b, "%s%2d. %s %s  |  %s %s%10s%s  %s%s%s\n",
-							entryPrefix, displayIndex, bar, percentStr,
+						fmt.Fprintf(&b, "%s%s%2d.%s %s %s%s%s  |  %s %s%10s%s  %s%s%s\n",
+							entryPrefix, numColor, displayIndex, colorReset, bar, percentColor, percentStr, colorReset,
 							nameSegment, sizeColor, size, colorReset,
 							colorGray, unusedLabel, colorReset)
 					}
@@ -1232,15 +1253,15 @@ func (m model) View() string {
 
 	fmt.Fprintln(&b)
 	if m.isOverview {
-		fmt.Fprintf(&b, "%s  ↑↓←→ Navigate  |  Enter Explore  |  O Open  |  F Reveal  |  Q Quit%s\n", colorGray, colorReset)
+		fmt.Fprintf(&b, "%s↑/↓ Nav  |  Enter  |  O Open  |  F Reveal  |  Q Quit%s\n", colorGray, colorReset)
 	} else if m.showLargeFiles {
-		fmt.Fprintf(&b, "%s  ↑↓ Navigate  |  O Open  |  F Reveal  |  ⌫ Delete  |  Q Quit%s\n", colorGray, colorReset)
+		fmt.Fprintf(&b, "%s↑/↓ Nav  |  O Open  |  F Reveal  |  ⌫ Delete  |  L Back  |  Q Quit%s\n", colorGray, colorReset)
 	} else {
 		largeFileCount := len(m.largeFiles)
 		if largeFileCount > 0 {
-			fmt.Fprintf(&b, "%s  ↑↓←→ Navigate  |  O Open  |  F Reveal  |  ⌫ Delete  |  L Large(%d)  |  Q Quit%s\n", colorGray, largeFileCount, colorReset)
+			fmt.Fprintf(&b, "%s↑/↓/←/→ Nav  |  Enter  |  O Open  |  F Reveal  |  ⌫ Delete  |  L Large(%d)  |  Q Quit%s\n", colorGray, largeFileCount, colorReset)
 		} else {
-			fmt.Fprintf(&b, "%s  ↑↓←→ Navigate  |  O Open  |  F Reveal  |  ⌫ Delete  |  Q Quit%s\n", colorGray, colorReset)
+			fmt.Fprintf(&b, "%s↑/↓/←/→ Nav  |  Enter  |  O Open  |  F Reveal  |  ⌫ Delete  |  Q Quit%s\n", colorGray, colorReset)
 		}
 	}
 	return b.String()
@@ -1252,10 +1273,9 @@ func scanPathConcurrent(root string, filesScanned, dirsScanned, bytesScanned *in
 		return scanResult{}, err
 	}
 
-	tracker := newLargeFileTracker()
 	var total int64
 	entries := make([]dirEntry, 0, len(children))
-	var entriesMu sync.Mutex
+	largeFiles := make([]fileEntry, 0, maxLargeFiles*2)
 
 	// Use worker pool for concurrent directory scanning
 	// For I/O-bound operations, use more workers than CPU count
@@ -1275,6 +1295,26 @@ func scanPathConcurrent(root string, filesScanned, dirsScanned, bytesScanned *in
 	}
 	sem := make(chan struct{}, maxWorkers)
 	var wg sync.WaitGroup
+
+	// Use channels to collect results without lock contention
+	entryChan := make(chan dirEntry, len(children))
+	largeFileChan := make(chan fileEntry, maxLargeFiles*2)
+
+	// Start goroutines to collect from channels
+	var collectorWg sync.WaitGroup
+	collectorWg.Add(2)
+	go func() {
+		defer collectorWg.Done()
+		for entry := range entryChan {
+			entries = append(entries, entry)
+		}
+	}()
+	go func() {
+		defer collectorWg.Done()
+		for file := range largeFileChan {
+			largeFiles = append(largeFiles, file)
+		}
+	}()
 
 	isRootDir := root == "/"
 
@@ -1304,16 +1344,13 @@ func scanPathConcurrent(root string, filesScanned, dirsScanned, bytesScanned *in
 					atomic.AddInt64(&total, size)
 					atomic.AddInt64(dirsScanned, 1)
 
-					entry := dirEntry{
+					entryChan <- dirEntry{
 						name:       name,
 						path:       path,
 						size:       size,
 						isDir:      true,
-						lastAccess: getLastAccessTime(path),
+						lastAccess: time.Time{}, // Lazy load when displayed
 					}
-					entriesMu.Lock()
-					entries = append(entries, entry)
-					entriesMu.Unlock()
 				}(child.Name(), fullPath)
 				continue
 			}
@@ -1325,20 +1362,17 @@ func scanPathConcurrent(root string, filesScanned, dirsScanned, bytesScanned *in
 				sem <- struct{}{}
 				defer func() { <-sem }()
 
-				size := calculateDirSizeConcurrent(path, tracker, filesScanned, dirsScanned, bytesScanned, currentPath)
+				size := calculateDirSizeConcurrent(path, largeFileChan, filesScanned, dirsScanned, bytesScanned, currentPath)
 				atomic.AddInt64(&total, size)
 				atomic.AddInt64(dirsScanned, 1)
 
-				entry := dirEntry{
+				entryChan <- dirEntry{
 					name:       name,
 					path:       path,
 					size:       size,
 					isDir:      true,
-					lastAccess: getLastAccessTime(path),
+					lastAccess: time.Time{}, // Lazy load when displayed
 				}
-				entriesMu.Lock()
-				entries = append(entries, entry)
-				entriesMu.Unlock()
 			}(child.Name(), fullPath)
 			continue
 		}
@@ -1353,20 +1387,25 @@ func scanPathConcurrent(root string, filesScanned, dirsScanned, bytesScanned *in
 		atomic.AddInt64(filesScanned, 1)
 		atomic.AddInt64(bytesScanned, size)
 
-		entries = append(entries, dirEntry{
+		entryChan <- dirEntry{
 			name:       child.Name(),
 			path:       fullPath,
 			size:       size,
 			isDir:      false,
-			lastAccess: getLastAccessTime(fullPath),
-		})
+			lastAccess: getLastAccessTimeFromInfo(info),
+		}
 		// Only track large files that are not code/text files
-		if !shouldSkipFileForLargeTracking(fullPath) {
-			tracker.add(fileEntry{name: child.Name(), path: fullPath, size: size})
+		if !shouldSkipFileForLargeTracking(fullPath) && size >= minLargeFileSize {
+			largeFileChan <- fileEntry{name: child.Name(), path: fullPath, size: size}
 		}
 	}
 
 	wg.Wait()
+
+	// Close channels and wait for collectors to finish
+	close(entryChan)
+	close(largeFileChan)
+	collectorWg.Wait()
 
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].size > entries[j].size
@@ -1376,12 +1415,16 @@ func scanPathConcurrent(root string, filesScanned, dirsScanned, bytesScanned *in
 	}
 
 	// Try to use Spotlight for faster large file discovery
-	var largeFiles []fileEntry
 	if spotlightFiles := findLargeFilesWithSpotlight(root, minLargeFileSize); len(spotlightFiles) > 0 {
 		largeFiles = spotlightFiles
 	} else {
-		// Fallback to manual tracking
-		largeFiles = tracker.list()
+		// Sort and trim large files collected from scanning
+		sort.Slice(largeFiles, func(i, j int) bool {
+			return largeFiles[i].size > largeFiles[j].size
+		})
+		if len(largeFiles) > maxLargeFiles {
+			largeFiles = largeFiles[:maxLargeFiles]
+		}
 	}
 
 	return scanResult{
@@ -1402,16 +1445,16 @@ func shouldFoldDirWithPath(name, path string) bool {
 		return true
 	}
 
-	// Special case: .npm directory - fold all subdirectories under cache folders
-	// This includes: .npm/_quick/*, .npm/_cacache/*, .npm/*/
-	if strings.Contains(path, "/.npm/") {
+	// Special case: npm cache directories - fold all subdirectories
+	// This includes: .npm/_quick/*, .npm/_cacache/*, .npm/a-z/*, .tnpm/*
+	if strings.Contains(path, "/.npm/") || strings.Contains(path, "/.tnpm/") {
 		// Get the parent directory name
 		parent := filepath.Base(filepath.Dir(path))
-		// If parent is a cache folder (_quick, _cacache, etc) or .npm itself, fold it
-		if parent == ".npm" || strings.HasPrefix(parent, "_") {
+		// If parent is a cache folder (_quick, _cacache, etc) or npm dir itself, fold it
+		if parent == ".npm" || parent == ".tnpm" || strings.HasPrefix(parent, "_") {
 			return true
 		}
-		// Also fold single-letter subdirectories (npm cache structure)
+		// Also fold single-letter subdirectories (npm cache structure like .npm/a/, .npm/b/)
 		if len(name) == 1 {
 			return true
 		}
@@ -1423,7 +1466,7 @@ func shouldFoldDirWithPath(name, path string) bool {
 // calculateDirSizeWithDu uses du command for fast directory size calculation
 // Returns size in bytes, or 0 if command fails
 func calculateDirSizeWithDu(path string) int64 {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	// Use -sk for 1K-block output, then convert to bytes
@@ -1540,27 +1583,24 @@ func findLargeFilesWithSpotlight(root string, minSize int64) []fileEntry {
 			continue
 		}
 
-		// Check if it's a directory, skip it
-		info, err := os.Stat(line)
-		if err != nil || info.IsDir() {
-			continue
-		}
-
-		// Filter out files in folded directories
-		inFoldedDir := false
-		for foldDir := range foldDirs {
-			if strings.Contains(line, string(os.PathSeparator)+foldDir+string(os.PathSeparator)) ||
-				strings.HasSuffix(filepath.Dir(line), string(os.PathSeparator)+foldDir) {
-				inFoldedDir = true
-				break
-			}
-		}
-		if inFoldedDir {
-			continue
-		}
-
-		// Filter out code files
+		// Filter out code files first (cheapest check, no I/O)
 		if shouldSkipFileForLargeTracking(line) {
+			continue
+		}
+
+		// Filter out files in folded directories (cheap string check)
+		if isInFoldedDir(line) {
+			continue
+		}
+
+		// Use Lstat instead of Stat (faster, doesn't follow symlinks)
+		info, err := os.Lstat(line)
+		if err != nil {
+			continue
+		}
+
+		// Skip if it's a directory or symlink
+		if info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 			continue
 		}
 
@@ -1586,149 +1626,93 @@ func findLargeFilesWithSpotlight(root string, minSize int64) []fileEntry {
 	return files
 }
 
-func calculateDirSizeConcurrent(root string, tracker *largeFileTracker, filesScanned, dirsScanned, bytesScanned *int64, currentPath *string) int64 {
+// isInFoldedDir checks if a path is inside a folded directory (optimized)
+func isInFoldedDir(path string) bool {
+	// Split path into components for faster checking
+	parts := strings.Split(path, string(os.PathSeparator))
+	for _, part := range parts {
+		if foldDirs[part] {
+			return true
+		}
+	}
+	return false
+}
+
+func calculateDirSizeConcurrent(root string, largeFileChan chan<- fileEntry, filesScanned, dirsScanned, bytesScanned *int64, currentPath *string) int64 {
+	// Read immediate children
+	children, err := os.ReadDir(root)
+	if err != nil {
+		return 0
+	}
+
 	var total int64
-	var updateCounter int64
-	var localFiles, localDirs int64
-	var batchBytes int64
+	var wg sync.WaitGroup
 
-	// Create context with timeout for very large directories
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
+	// Limit concurrent subdirectory scans to avoid too many goroutines
+	maxConcurrent := runtime.NumCPU() * 2
+	if maxConcurrent > 32 {
+		maxConcurrent = 32
+	}
+	sem := make(chan struct{}, maxConcurrent)
 
-	walkFunc := func(path string, d fs.DirEntry, err error) error {
-		// Check for context cancellation
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			// Skip folded directories during recursive scanning, but calculate their size first
-			if shouldFoldDirWithPath(d.Name(), path) {
-				// Calculate folded directory size and add to parent total
-				foldedSize := calculateDirSizeWithDu(path)
-				if foldedSize > 0 {
-					total += foldedSize
-					atomic.AddInt64(bytesScanned, foldedSize)
-				}
-				return filepath.SkipDir
+	for _, child := range children {
+		fullPath := filepath.Join(root, child.Name())
+
+		if child.IsDir() {
+			// Check if this is a folded directory
+			if shouldFoldDirWithPath(child.Name(), fullPath) {
+				// Use du for folded directories (much faster)
+				wg.Add(1)
+				go func(path string) {
+					defer wg.Done()
+					size := calculateDirSizeWithDu(path)
+					if size > 0 {
+						atomic.AddInt64(&total, size)
+						atomic.AddInt64(bytesScanned, size)
+						atomic.AddInt64(dirsScanned, 1)
+					}
+				}(fullPath)
+				continue
 			}
-			localDirs++
-			// Batch update every N dirs to reduce atomic operations
-			if localDirs%batchUpdateSize == 0 {
-				atomic.AddInt64(dirsScanned, batchUpdateSize)
-				localDirs = 0
-			}
-			return nil
+
+			// Recursively scan subdirectory in parallel
+			wg.Add(1)
+			go func(path string) {
+				defer wg.Done()
+				sem <- struct{}{}
+				defer func() { <-sem }()
+
+				size := calculateDirSizeConcurrent(path, largeFileChan, filesScanned, dirsScanned, bytesScanned, currentPath)
+				atomic.AddInt64(&total, size)
+				atomic.AddInt64(dirsScanned, 1)
+			}(fullPath)
+			continue
 		}
-		info, err := d.Info()
+
+		// Handle files
+		info, err := child.Info()
 		if err != nil {
-			return nil
+			continue
 		}
-		// Get actual disk usage for sparse files and cloud files
-		size := getActualFileSize(path, info)
+
+		size := getActualFileSize(fullPath, info)
 		total += size
-		batchBytes += size
-		localFiles++
+		atomic.AddInt64(filesScanned, 1)
+		atomic.AddInt64(bytesScanned, size)
 
-		// Batch update every N files to reduce atomic operations
-		if localFiles%batchUpdateSize == 0 {
-			atomic.AddInt64(filesScanned, batchUpdateSize)
-			atomic.AddInt64(bytesScanned, batchBytes)
-			localFiles = 0
-			batchBytes = 0
+		// Track large files
+		if !shouldSkipFileForLargeTracking(fullPath) && size >= minLargeFileSize {
+			largeFileChan <- fileEntry{name: child.Name(), path: fullPath, size: size}
 		}
 
-		// Only track large files that are not code/text files
-		if !shouldSkipFileForLargeTracking(path) {
-			tracker.add(fileEntry{name: filepath.Base(path), path: path, size: size})
+		// Update current path
+		if currentPath != nil {
+			*currentPath = fullPath
 		}
-
-		// Update current path periodically to reduce contention
-		updateCounter++
-		if updateCounter%pathUpdateInterval == 0 && currentPath != nil {
-			*currentPath = path
-		}
-
-		return nil
 	}
 
-	_ = filepath.WalkDir(root, walkFunc)
-
-	// Final update for remaining counts
-	if localFiles > 0 {
-		atomic.AddInt64(filesScanned, localFiles)
-	}
-	if localDirs > 0 {
-		atomic.AddInt64(dirsScanned, localDirs)
-	}
-	if batchBytes > 0 {
-		atomic.AddInt64(bytesScanned, batchBytes)
-	}
-
+	wg.Wait()
 	return total
-}
-
-type largeFileTracker struct {
-	mu        sync.Mutex
-	entries   []fileEntry
-	minSize   int64
-	needsSort bool
-}
-
-func newLargeFileTracker() *largeFileTracker {
-	return &largeFileTracker{
-		entries: make([]fileEntry, 0, maxLargeFiles*2), // Pre-allocate more space
-		minSize: minLargeFileSize,
-	}
-}
-
-func (t *largeFileTracker) add(f fileEntry) {
-	if f.size < t.minSize {
-		return
-	}
-
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	// Just append without sorting - sort only once at the end
-	t.entries = append(t.entries, f)
-	t.needsSort = true
-
-	// Update minimum size threshold dynamically
-	if len(t.entries) > maxLargeFiles*3 {
-		// Periodically sort and trim to avoid memory bloat
-		sort.Slice(t.entries, func(i, j int) bool {
-			return t.entries[i].size > t.entries[j].size
-		})
-		if len(t.entries) > maxLargeFiles {
-			t.minSize = t.entries[maxLargeFiles-1].size
-			t.entries = t.entries[:maxLargeFiles]
-		}
-		t.needsSort = false
-	}
-}
-
-func (t *largeFileTracker) list() []fileEntry {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	// Sort only when needed
-	if t.needsSort {
-		sort.Slice(t.entries, func(i, j int) bool {
-			return t.entries[i].size > t.entries[j].size
-		})
-		if len(t.entries) > maxLargeFiles {
-			t.entries = t.entries[:maxLargeFiles]
-		}
-		t.needsSort = false
-	}
-
-	return append([]fileEntry(nil), t.entries...)
 }
 
 func displayPath(path string) string {
@@ -1744,21 +1728,57 @@ func displayPath(path string) string {
 
 // truncateMiddle truncates string in the middle, keeping head and tail
 // e.g. "very/long/path/to/file.txt" -> "very/long/.../file.txt"
-func truncateMiddle(s string, maxLen int) string {
-	if len(s) <= maxLen {
+// Handles UTF-8 and display width correctly (CJK chars count as 2 width)
+func truncateMiddle(s string, maxWidth int) string {
+	runes := []rune(s)
+	currentWidth := displayWidth(s)
+
+	if currentWidth <= maxWidth {
 		return s
 	}
 
-	// Reserve 3 chars for "..."
-	if maxLen < 10 {
-		return s[:maxLen]
+	// Reserve 3 width for "..."
+	if maxWidth < 10 {
+		// Simple truncation for very small width
+		width := 0
+		for i, r := range runes {
+			width += runeWidth(r)
+			if width > maxWidth {
+				return string(runes[:i])
+			}
+		}
+		return s
 	}
 
 	// Keep more of the tail (filename usually more important)
-	headLen := (maxLen - 3) / 3
-	tailLen := maxLen - 3 - headLen
+	targetHeadWidth := (maxWidth - 3) / 3
+	targetTailWidth := maxWidth - 3 - targetHeadWidth
 
-	return s[:headLen] + "..." + s[len(s)-tailLen:]
+	// Find head cutoff point based on display width
+	headWidth := 0
+	headIdx := 0
+	for i, r := range runes {
+		w := runeWidth(r)
+		if headWidth + w > targetHeadWidth {
+			break
+		}
+		headWidth += w
+		headIdx = i + 1
+	}
+
+	// Find tail cutoff point based on display width
+	tailWidth := 0
+	tailIdx := len(runes)
+	for i := len(runes) - 1; i >= 0; i-- {
+		w := runeWidth(runes[i])
+		if tailWidth + w > targetTailWidth {
+			break
+		}
+		tailWidth += w
+		tailIdx = i
+	}
+
+	return string(runes[:headIdx]) + "..." + string(runes[tailIdx:])
 }
 
 func formatNumber(n int64) string {
@@ -2485,7 +2505,11 @@ func getLastAccessTime(path string) time.Time {
 	if err != nil {
 		return time.Time{}
 	}
+	return getLastAccessTimeFromInfo(info)
+}
 
+// getLastAccessTimeFromInfo extracts atime from existing FileInfo (faster, avoids re-stat)
+func getLastAccessTimeFromInfo(info fs.FileInfo) time.Time {
 	// Use syscall to get atime on macOS
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok {
