@@ -185,7 +185,7 @@ curl -fsSL https://raw.githubusercontent.com/tw93/Mole/main/scripts/setup-quick-
 
 Adds 5 commands: `clean`, `uninstall`, `optimize`, `analyze`, `status`. Finds your terminal automatically or set `MO_LAUNCHER_APP=<name>` to override.
 
-Reload Raycast by running `Reload Script Directories`, or simply restarting Raycast.
+For Raycast, reload by running `Reload Script Directories` or restarting Raycast. For Alfred, workflows are registered automatically and ready to use.
 
 ## Support
 
