@@ -1,0 +1,6 @@
+# Map bot accounts to Tw93
+# Format: Preferred Name <preferred@email> Commit Name <commit@email>
+
+Tw93 <tw93@qq.com> github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+Tw93 <tw93@qq.com> Bot <noreply@github.com>
+Tw93 <tw93@qq.com> copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>
