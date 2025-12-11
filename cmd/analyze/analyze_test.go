@@ -333,7 +333,7 @@ func TestScanPathPermissionError(t *testing.T) {
 	if err := os.Mkdir(lockedDir, 0o755); err != nil {
 		t.Fatalf("create locked dir: %v", err)
 	}
-	
+
 	// Create a file inside before locking, just to be sure
 	if err := os.WriteFile(filepath.Join(lockedDir, "secret.txt"), []byte("shh"), 0o644); err != nil {
 		t.Fatalf("write secret: %v", err)
@@ -350,7 +350,7 @@ func TestScanPathPermissionError(t *testing.T) {
 
 	var files, dirs, bytes int64
 	current := ""
-	
+
 	// Scanning the locked dir itself should fail
 	_, err := scanPathConcurrent(lockedDir, &files, &dirs, &bytes, &current)
 	if err == nil {
