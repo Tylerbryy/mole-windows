@@ -84,7 +84,7 @@ Scanning cache directories...
   ✓ Developer tools (Xcode, Node.js, npm)                    23.3GB
   ✓ System logs and temp files                                3.8GB
   ✓ App-specific cache (Spotify, Dropbox, Slack)              8.4GB
-  ✓ Trash                                                     12.3GB
+  ✓ Trash                                                    12.3GB
 
 ====================================================================
 Space freed: 95.5GB | Free space now: 223.5GB
@@ -98,7 +98,7 @@ $ mo uninstall
 
 Select Apps to Remove
 ═══════════════════════════
-▶ ☑ Adobe Creative Cloud      (12.4G) | Old
+▶ ☑ Adobe Creative Cloud      (9.4G) | Old
   ☐ WeChat                    (2.1G) | Recent
   ☐ Final Cut Pro             (3.8G) | Recent
 
