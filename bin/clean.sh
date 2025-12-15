@@ -223,7 +223,7 @@ safe_clean() {
 
         # Hard-coded protection for critical apps (cannot be disabled by user)
         case "$path" in
-            *clash* | *Clash* | *surge* | *Surge* | *mihomo* | *openvpn* | *OpenVPN* | *verge* | *Verge* | *shadowsocks* | *Shadowsocks* | *v2ray* | *V2Ray* | *sing-box* | *tailscale* | *nordvpn* | *NordVPN* | *expressvpn* | *ExpressVPN* | *protonvpn* | *ProtonVPN* | *mullvad* | *Mullvad* | *hiddify* | *Hiddify* | *loon* | *Loon* | *Cursor* | *cursor* | *Claude* | *claude* | *ChatGPT* | *chatgpt* | *Ollama* | *ollama* | *lmstudio* | *Chatbox* | *Gemini* | *gemini* | *Perplexity* | *perplexity* | *Windsurf* | *windsurf* | *Poe* | *poe* | *DiffusionBee* | *diffusionbee* | *DrawThings* | *drawthings*)
+            *clash* | *Clash* | *surge* | *Surge* | *mihomo* | *openvpn* | *OpenVPN* | *verge* | *Verge* | *shadowsocks* | *Shadowsocks* | *v2ray* | *V2Ray* | *sing-box* | *tailscale* | *nordvpn* | *NordVPN* | *expressvpn* | *ExpressVPN* | *protonvpn* | *ProtonVPN* | *mullvad* | *Mullvad* | *hiddify* | *Hiddify* | *loon* | *Loon* | *Cursor* | *cursor* | *Claude* | *claude* | *ChatGPT* | *chatgpt* | *Ollama* | *ollama* | *lmstudio* | *Chatbox* | *Gemini* | *gemini* | *Perplexity* | *perplexity* | *Windsurf* | *windsurf* | *Poe* | *poe* | *DiffusionBee* | *diffusionbee* | *DrawThings* | *drawthings* | *Aerial* | *aerial* | *Fliqlo* | *fliqlo* | *com.apple.finder*)
                 skip=true
                 ((skipped_count++))
                 ;;

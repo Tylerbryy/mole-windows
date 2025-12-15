@@ -82,6 +82,7 @@ declare -a DEFAULT_WHITELIST_PATTERNS=(
     "$HOME/Library/Caches/org.R-project.R/R/renv/*"
     "$HOME/Library/Caches/JetBrains*"
     "$HOME/Library/Caches/com.jetbrains.toolbox*"
+    "$HOME/Library/Caches/com.apple.finder"
     "$FINDER_METADATA_SENTINEL"
 )
 
