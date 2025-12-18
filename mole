@@ -22,7 +22,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/core/common.sh"
 
 # Version info
-VERSION="1.13.8"
+VERSION="1.13.9"
 MOLE_TAGLINE="Deep clean and optimize your Mac."
 
 # Check if Touch ID is already configured

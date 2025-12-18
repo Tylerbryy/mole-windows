@@ -491,7 +491,13 @@ should_protect_path() {
 
     # 1. Check for explicit critical system keywords in path (case-insensitive)
     # Protect System Settings, Preferences, Control Center, and related XPC services
+    # Also protect "Settings" (used in macOS Sequoia) and savedState files
     if [[ "$path_lower" =~ systemsettings || "$path_lower" =~ systempreferences || "$path_lower" =~ controlcenter ]]; then
+        return 0
+    fi
+
+    # Additional check for com.apple.Settings (macOS Sequoia System Settings)
+    if [[ "$path_lower" =~ com\.apple\.settings ]]; then
         return 0
     fi
 
