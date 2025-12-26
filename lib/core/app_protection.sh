@@ -351,6 +351,7 @@ readonly DATA_PROTECTED_BUNDLES=(
     "com.microsoft.teams*"                    # Microsoft Teams
     "com.slack.Slack"                         # Slack
     "com.hnc.Discord"                         # Discord
+    "app.legcord.Legcord"                     # Legcord
     "org.telegram.desktop"                    # Telegram
     "ru.keepcoder.Telegram"                   # Telegram legacy
     "net.whatsapp.WhatsApp"                   # WhatsApp

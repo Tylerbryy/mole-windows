@@ -41,6 +41,7 @@ clean_code_editors() {
 # Clean communication apps (Slack, Discord, Zoom, etc.)
 clean_communication_apps() {
     safe_clean ~/Library/Application\ Support/discord/Cache/* "Discord cache"
+    safe_clean ~/Library/Application\ Support/legcord/Cache/* "Legcord cache"
     safe_clean ~/Library/Application\ Support/Slack/Cache/* "Slack cache"
     safe_clean ~/Library/Caches/us.zoom.xos/* "Zoom cache"
     safe_clean ~/Library/Caches/com.tencent.xinWeChat/* "WeChat cache"
