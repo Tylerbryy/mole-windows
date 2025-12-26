@@ -130,6 +130,7 @@ setup() {
     touch "$HOME/www/project/package.json"  # Recently touched
 
     result=$(bash -c "
+        source '$PROJECT_ROOT/lib/core/common.sh'
         source '$PROJECT_ROOT/lib/clean/project.sh'
         if is_recently_modified '$HOME/www/project/node_modules'; then
             echo 'RECENT'
@@ -148,6 +149,7 @@ setup() {
     # Note: This is hard to test reliably without mocking 'find'
     # Just verify the function can run without errors
     bash -c "
+        source '$PROJECT_ROOT/lib/core/common.sh'
         source '$PROJECT_ROOT/lib/clean/project.sh'
         is_recently_modified '$HOME/www/old-project/node_modules' || true
     "
