@@ -265,9 +265,11 @@ check_macos_update() {
         fi
 
         # Prefer avoiding false negatives: if the system indicates updates are pending,
-        # only clear the flag when softwareupdate explicitly reports no updates.
-        if [[ $sw_status -eq 0 && -n "$sw_output" ]] && echo "$sw_output" | grep -qE '^\s*No new software available\s*\.?\s*$'; then
-            updates_available="false"
+        # only clear the flag when softwareupdate returns a list without any update entries.
+        if [[ $sw_status -eq 0 && -n "$sw_output" ]]; then
+            if ! echo "$sw_output" | grep -qE '^[[:space:]]*\*'; then
+                updates_available="false"
+            fi
         fi
     fi
 
