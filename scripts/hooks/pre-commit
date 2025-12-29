@@ -9,14 +9,17 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Check if binaries are being committed
+# Check if binaries are being added or modified (ignore deletions)
 binaries=()
-if git diff --cached --name-only | grep -q "^bin/analyze-go$"; then
-    binaries+=("bin/analyze-go")
-fi
-if git diff --cached --name-only | grep -q "^bin/status-go$"; then
-    binaries+=("bin/status-go")
-fi
+while read -r status path; do
+    case "$status" in
+        A|M)
+            if [[ "$path" == "bin/analyze-go" || "$path" == "bin/status-go" ]]; then
+                binaries+=("$path")
+            fi
+            ;;
+    esac
+done < <(git diff --cached --name-status)
 
 # If no binaries are being committed, exit early
 if [[ ${#binaries[@]} -eq 0 ]]; then

@@ -134,20 +134,44 @@ resolve_source_dir() {
     # Expand tmp now so trap doesn't depend on local scope
     trap "rm -rf '$tmp'" EXIT
 
-    start_line_spinner "Fetching Mole source..."
+    local branch="${MOLE_VERSION:-}"
+    if [[ -z "$branch" ]]; then
+        branch="$(get_latest_release_tag || true)"
+    fi
+    if [[ -z "$branch" ]]; then
+        branch="$(get_latest_release_tag_from_git || true)"
+    fi
+    if [[ -z "$branch" ]]; then
+        branch="main"
+    fi
+    local url="https://github.com/tw93/mole/archive/refs/heads/main.tar.gz"
+
+    # If a specific version is requested (e.g. V1.0.0), use the tag URL
+    if [[ "$branch" != "main" ]]; then
+        url="https://github.com/tw93/mole/archive/refs/tags/${branch}.tar.gz"
+    fi
+
+    start_line_spinner "Fetching Mole source (${branch})..."
     if command -v curl > /dev/null 2>&1; then
-        if curl -fsSL -o "$tmp/mole.tar.gz" "https://github.com/tw93/mole/archive/refs/heads/main.tar.gz" 2> /dev/null; then
+        if curl -fsSL -o "$tmp/mole.tar.gz" "$url" 2> /dev/null; then
             if tar -xzf "$tmp/mole.tar.gz" -C "$tmp" 2> /dev/null; then
                 stop_line_spinner
-                # Extracted folder name: Mole-main (capital M)
-                if [[ -d "$tmp/Mole-main" ]]; then
-                    SOURCE_DIR="$tmp/Mole-main"
-                    return 0
-                # Fallback for lowercase (in case GitHub changes it)
-                elif [[ -d "$tmp/mole-main" ]]; then
-                    SOURCE_DIR="$tmp/mole-main"
+
+                # Find the extracted directory (name varies by tag/branch)
+                # It usually looks like Mole-main, mole-main, Mole-1.0.0, etc.
+                local extracted_dir
+                extracted_dir=$(find "$tmp" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+
+                if [[ -n "$extracted_dir" && -f "$extracted_dir/mole" ]]; then
+                    SOURCE_DIR="$extracted_dir"
                     return 0
                 fi
+            fi
+        else
+            stop_line_spinner
+            if [[ "$branch" != "main" ]]; then
+                log_error "Failed to fetch version ${branch}. Check if tag exists."
+                exit 1
             fi
         fi
     fi
@@ -155,7 +179,12 @@ resolve_source_dir() {
 
     start_line_spinner "Cloning Mole source..."
     if command -v git > /dev/null 2>&1; then
-        if git clone --depth=1 https://github.com/tw93/mole.git "$tmp/mole" > /dev/null 2>&1; then
+        local git_args=("--depth=1")
+        if [[ "$branch" != "main" ]]; then
+             git_args+=("--branch" "$branch")
+        fi
+
+        if git clone "${git_args[@]}" https://github.com/tw93/mole.git "$tmp/mole" > /dev/null 2>&1; then
             stop_line_spinner
             SOURCE_DIR="$tmp/mole"
             return 0
@@ -172,6 +201,36 @@ get_source_version() {
     if [[ -f "$source_mole" ]]; then
         sed -n 's/^VERSION="\(.*\)"$/\1/p' "$source_mole" | head -n1
     fi
+}
+
+get_latest_release_tag() {
+    local tag
+    if ! command -v curl > /dev/null 2>&1; then
+        return 1
+    fi
+    tag=$(curl -fsSL --connect-timeout 2 --max-time 3 \
+        "https://api.github.com/repos/tw93/mole/releases/latest" 2> /dev/null |
+        sed -n 's/.*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)
+    if [[ -z "$tag" ]]; then
+        return 1
+    fi
+    if [[ "$tag" != V* && "$tag" != v* ]]; then
+        tag="V${tag}"
+    else
+        tag="V${tag#v}"
+    fi
+    printf '%s\n' "$tag"
+}
+
+get_latest_release_tag_from_git() {
+    if ! command -v git > /dev/null 2>&1; then
+        return 1
+    fi
+    git ls-remote --tags --refs https://github.com/tw93/mole.git 2> /dev/null |
+        awk -F/ '{print $NF}' |
+        grep -E '^V[0-9]' |
+        sort -V |
+        tail -n 1
 }
 
 get_installed_version() {
@@ -288,6 +347,118 @@ create_directories() {
 
 }
 
+# Build binary locally from source when download isn't available
+build_binary_from_source() {
+    local binary_name="$1"
+    local target_path="$2"
+    local cmd_dir=""
+
+    case "$binary_name" in
+        analyze)
+            cmd_dir="cmd/analyze"
+            ;;
+        status)
+            cmd_dir="cmd/status"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    if ! command -v go > /dev/null 2>&1; then
+        return 1
+    fi
+
+    if [[ ! -d "$SOURCE_DIR/$cmd_dir" ]]; then
+        return 1
+    fi
+
+    if [[ -t 1 ]]; then
+        start_line_spinner "Building ${binary_name} from source..."
+    else
+        echo "Building ${binary_name} from source..."
+    fi
+
+    if (cd "$SOURCE_DIR" && go build -ldflags="-s -w" -o "$target_path" "./$cmd_dir" > /dev/null 2>&1); then
+        if [[ -t 1 ]]; then stop_line_spinner; fi
+        chmod +x "$target_path"
+        log_success "Built ${binary_name} from source"
+        return 0
+    fi
+
+    if [[ -t 1 ]]; then stop_line_spinner; fi
+    log_warning "Failed to build ${binary_name} from source"
+    return 1
+}
+
+# Download binary from release
+download_binary() {
+    local binary_name="$1"
+    local target_path="$CONFIG_DIR/bin/${binary_name}-go"
+    local arch
+    arch=$(uname -m)
+    local arch_suffix="amd64"
+    if [[ "$arch" == "arm64" ]]; then
+        arch_suffix="arm64"
+    fi
+
+    # Try to use local binary first (from build or source)
+    # Check for both standard name and cross-compiled name
+    if [[ -f "$SOURCE_DIR/bin/${binary_name}-go" ]]; then
+        cp "$SOURCE_DIR/bin/${binary_name}-go" "$target_path"
+        chmod +x "$target_path"
+        log_success "Installed local ${binary_name} binary"
+        return 0
+    elif [[ -f "$SOURCE_DIR/bin/${binary_name}-darwin-${arch_suffix}" ]]; then
+        cp "$SOURCE_DIR/bin/${binary_name}-darwin-${arch_suffix}" "$target_path"
+        chmod +x "$target_path"
+        log_success "Installed local ${binary_name} binary"
+        return 0
+    fi
+
+    # Fallback to download
+    local version
+    version=$(get_source_version)
+    if [[ -z "$version" ]]; then
+        log_warning "Could not determine version for ${binary_name}, trying local build"
+        if build_binary_from_source "$binary_name" "$target_path"; then
+            return 0
+        fi
+        return 1
+    fi
+    local url="https://github.com/tw93/mole/releases/download/V${version}/${binary_name}-darwin-${arch_suffix}"
+
+    # Only attempt download if we have internet
+    if ! curl --connect-timeout 2 -s https://github.com > /dev/null; then
+        log_warning "No internet connection, trying local build for ${binary_name}"
+        if build_binary_from_source "$binary_name" "$target_path"; then
+            return 0
+        fi
+        log_error "Failed to install ${binary_name} binary (offline)"
+        return 1
+    fi
+
+    if [[ -t 1 ]]; then
+        start_line_spinner "Downloading ${binary_name}..."
+    else
+        echo "Downloading ${binary_name}..."
+    fi
+
+    if curl -fsSL --connect-timeout 10 --max-time 60 -o "$target_path" "$url"; then
+        if [[ -t 1 ]]; then stop_line_spinner; fi
+        chmod +x "$target_path"
+        log_success "Downloaded ${binary_name} binary"
+    else
+        if [[ -t 1 ]]; then stop_line_spinner; fi
+        log_warning "Could not download ${binary_name} binary (v${version}), trying local build"
+        if build_binary_from_source "$binary_name" "$target_path"; then
+            return 0
+        fi
+        log_error "Failed to install ${binary_name} binary"
+        return 1
+    fi
+}
+
 # Install files
 install_files() {
 
@@ -366,6 +537,14 @@ install_files() {
     # Update the mole script to use the config directory when installed elsewhere
     if [[ "$source_dir_abs" != "$install_dir_abs" ]]; then
         maybe_sudo sed -i '' "s|SCRIPT_DIR=.*|SCRIPT_DIR=\"$CONFIG_DIR\"|" "$INSTALL_DIR/mole"
+    fi
+
+    # Install/Download Go binaries
+    if ! download_binary "analyze"; then
+        exit 1
+    fi
+    if ! download_binary "status"; then
+        exit 1
     fi
 }
 

@@ -430,11 +430,11 @@ update_mole() {
 
     # Run installer with visible output (but capture for error handling)
     local install_output
-    if install_output=$("$tmp_installer" --prefix "$install_dir" --config "$HOME/.config/mole" --update 2>&1); then
+    if install_output=$(MOLE_VERSION="V${latest}" "$tmp_installer" --prefix "$install_dir" --config "$HOME/.config/mole" --update 2>&1); then
         process_install_output "$install_output"
     else
         # Retry without --update flag
-        if install_output=$("$tmp_installer" --prefix "$install_dir" --config "$HOME/.config/mole" 2>&1); then
+        if install_output=$(MOLE_VERSION="V${latest}" "$tmp_installer" --prefix "$install_dir" --config "$HOME/.config/mole" 2>&1); then
             process_install_output "$install_output"
         else
             if [[ -t 1 ]]; then stop_inline_spinner; fi

@@ -53,4 +53,8 @@ cmd/status/status
 /status
 /analyze
 mole-analyze
-# Note: bin/analyze-go and bin/status-go are tracked as release binaries
+# Go binaries
+bin/analyze-go
+bin/status-go
+bin/analyze-darwin-*
+bin/status-darwin-*

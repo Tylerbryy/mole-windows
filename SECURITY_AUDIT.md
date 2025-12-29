@@ -349,6 +349,8 @@ The compiled Go binary (`analyze-go`) includes:
 - All dependencies pinned to specific versions
 - Regular security audits
 - No transitive dependencies with known CVEs
+- **Automated Releases**: Binaries compiled via GitHub Actions and signed
+- **Source Only**: Repository contains no pre-compiled binaries
 
 ---
 
