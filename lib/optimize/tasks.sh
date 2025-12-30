@@ -11,7 +11,23 @@ set -euo pipefail
 readonly MOLE_TM_THIN_TIMEOUT=180
 readonly MOLE_TM_THIN_VALUE=9999999999
 
+# Helper function to get appropriate icon and color for dry-run mode
+opt_msg() {
+    local message="$1"
+    if [[ "${MOLE_DRY_RUN:-0}" == "1" ]]; then
+        echo -e "  ${YELLOW}${ICON_DRY_RUN}${NC} $message"
+    else
+        echo -e "  ${GREEN}✓${NC} $message"
+    fi
+}
+
 flush_dns_cache() {
+    # Skip actual flush in dry-run mode
+    if [[ "${MOLE_DRY_RUN:-0}" == "1" ]]; then
+        MOLE_DNS_FLUSHED=1
+        return 0
+    fi
+
     if sudo dscacheutil -flushcache 2> /dev/null && sudo killall -HUP mDNSResponder 2> /dev/null; then
         MOLE_DNS_FLUSHED=1
         return 0
@@ -21,34 +37,28 @@ flush_dns_cache() {
 
 # Rebuild databases and flush caches
 opt_system_maintenance() {
-    local -a results=()
-    local darwin_major
-    darwin_major=$(get_darwin_major)
-
     if flush_dns_cache; then
-        results+=("${GREEN}✓${NC} DNS cache flushed")
+        opt_msg "DNS cache flushed"
     fi
 
     local spotlight_status
     spotlight_status=$(mdutil -s / 2> /dev/null || echo "")
     if echo "$spotlight_status" | grep -qi "Indexing disabled"; then
-        results+=("${GRAY}${ICON_EMPTY}${NC} Spotlight indexing disabled")
+        echo -e "  ${GRAY}${ICON_EMPTY}${NC} Spotlight indexing disabled"
     else
-        results+=("${GREEN}✓${NC} Spotlight index verified")
+        opt_msg "Spotlight index verified"
     fi
-
-    for result in "${results[@]}"; do
-        echo -e "  $result"
-    done
 }
 
 # Refresh Finder caches (QuickLook and icon services)
 # Note: Safari caches are cleaned separately in clean/user.sh, so excluded here
 opt_cache_refresh() {
-    qlmanage -r cache > /dev/null 2>&1 || true
-    qlmanage -r > /dev/null 2>&1 || true
+    # Skip qlmanage commands in dry-run mode
+    if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+        qlmanage -r cache > /dev/null 2>&1 || true
+        qlmanage -r > /dev/null 2>&1 || true
+    fi
 
-    local refreshed=0
     local -a cache_targets=(
         "$HOME/Library/Caches/com.apple.QuickLook.thumbnailcache"
         "$HOME/Library/Caches/com.apple.iconservices.store"
@@ -58,15 +68,13 @@ opt_cache_refresh() {
     for target_path in "${cache_targets[@]}"; do
         if [[ -e "$target_path" ]]; then
             if ! should_protect_path "$target_path"; then
-                if safe_remove "$target_path" true; then
-                    ((refreshed++))
-                fi
+                safe_remove "$target_path" true > /dev/null 2>&1
             fi
         fi
     done
 
-    echo -e "  ${GREEN}✓${NC} QuickLook thumbnails refreshed"
-    echo -e "  ${GREEN}✓${NC} Icon services cache rebuilt"
+    opt_msg "QuickLook thumbnails refreshed"
+    opt_msg "Icon services cache rebuilt"
 }
 
 # Removed: opt_maintenance_scripts - macOS handles log rotation automatically via launchd
@@ -86,7 +94,7 @@ opt_saved_state_cleanup() {
         done < <(command find "$state_dir" -type d -name "*.savedState" -mtime "+$MOLE_SAVED_STATE_AGE_DAYS" -print0 2> /dev/null)
     fi
 
-    echo -e "  ${GREEN}✓${NC} App saved states optimized"
+    opt_msg "App saved states optimized"
 }
 
 # Removed: opt_swap_cleanup - Direct virtual memory operations pose system crash risk
@@ -99,23 +107,23 @@ opt_fix_broken_configs() {
     local broken_prefs=$(fix_broken_preferences)
 
     if [[ $broken_prefs -gt 0 ]]; then
-        echo -e "  ${GREEN}✓${NC} Repaired $broken_prefs corrupted preference files"
+        opt_msg "Repaired $broken_prefs corrupted preference files"
     else
-        echo -e "  ${GREEN}✓${NC} All preference files valid"
+        opt_msg "All preference files valid"
     fi
 }
 
 # Network cache optimization
 opt_network_optimization() {
     if [[ "${MOLE_DNS_FLUSHED:-0}" == "1" ]]; then
-        echo -e "  ${GREEN}✓${NC} DNS cache already refreshed"
-        echo -e "  ${GREEN}✓${NC} mDNSResponder already restarted"
+        opt_msg "DNS cache already refreshed"
+        opt_msg "mDNSResponder already restarted"
         return 0
     fi
 
     if flush_dns_cache; then
-        echo -e "  ${GREEN}✓${NC} DNS cache refreshed"
-        echo -e "  ${GREEN}✓${NC} mDNSResponder restarted"
+        opt_msg "DNS cache refreshed"
+        opt_msg "mDNSResponder restarted"
     else
         echo -e "  ${YELLOW}!${NC} Failed to refresh DNS cache"
     fi
@@ -167,27 +175,32 @@ opt_sqlite_vacuum() {
                 continue
             fi
 
-            # Try to vacuum
+            # Try to vacuum (skip in dry-run mode)
             local exit_code=0
-            set +e
-            run_with_timeout 20 sqlite3 "$db_file" "VACUUM;" 2> /dev/null
-            exit_code=$?
-            set -e
+            if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+                set +e
+                run_with_timeout 20 sqlite3 "$db_file" "VACUUM;" 2> /dev/null
+                exit_code=$?
+                set -e
 
-            if [[ $exit_code -eq 0 ]]; then
-                ((vacuumed++))
-            elif [[ $exit_code -eq 124 ]]; then
-                ((timed_out++))
+                if [[ $exit_code -eq 0 ]]; then
+                    ((vacuumed++))
+                elif [[ $exit_code -eq 124 ]]; then
+                    ((timed_out++))
+                else
+                    ((failed++))
+                fi
             else
-                ((failed++))
+                # In dry-run mode, just count the database
+                ((vacuumed++))
             fi
         done < <(compgen -G "$pattern" || true)
     done
 
     if [[ $vacuumed -gt 0 ]]; then
-        echo -e "  ${GREEN}✓${NC} Optimized $vacuumed databases for Mail, Safari, Messages"
+        opt_msg "Optimized $vacuumed databases for Mail, Safari, Messages"
     elif [[ $timed_out -eq 0 && $failed -eq 0 ]]; then
-        echo -e "  ${GREEN}✓${NC} All databases already optimized"
+        opt_msg "All databases already optimized"
     else
         echo -e "  ${YELLOW}!${NC} Database optimization incomplete"
     fi
@@ -212,22 +225,28 @@ opt_launch_services_rebuild() {
 
     if [[ -f "$lsregister" ]]; then
         local success=0
-        set +e
-        "$lsregister" -r -domain local -domain user -domain system > /dev/null 2>&1
-        success=$?
-        if [[ $success -ne 0 ]]; then
-            "$lsregister" -r -domain local -domain user > /dev/null 2>&1
+
+        # Skip actual rebuild in dry-run mode
+        if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+            set +e
+            "$lsregister" -r -domain local -domain user -domain system > /dev/null 2>&1
             success=$?
+            if [[ $success -ne 0 ]]; then
+                "$lsregister" -r -domain local -domain user > /dev/null 2>&1
+                success=$?
+            fi
+            set -e
+        else
+            success=0  # Assume success in dry-run mode
         fi
-        set -e
 
         if [[ -t 1 ]]; then
             stop_inline_spinner
         fi
 
         if [[ $success -eq 0 ]]; then
-            echo -e "  ${GREEN}✓${NC} LaunchServices repaired"
-            echo -e "  ${GREEN}✓${NC} File associations refreshed"
+            opt_msg "LaunchServices repaired"
+            opt_msg "File associations refreshed"
         else
             echo -e "  ${YELLOW}!${NC} Failed to rebuild LaunchServices"
         fi
@@ -244,13 +263,18 @@ opt_launch_services_rebuild() {
 opt_font_cache_rebuild() {
     local success=false
 
-    if sudo atsutil databases -remove > /dev/null 2>&1; then
-        success=true
+    # Skip actual font cache removal in dry-run mode
+    if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+        if sudo atsutil databases -remove > /dev/null 2>&1; then
+            success=true
+        fi
+    else
+        success=true  # Assume success in dry-run mode
     fi
 
     if [[ "$success" == "true" ]]; then
-        echo -e "  ${GREEN}✓${NC} Font cache cleared"
-        echo -e "  ${GREEN}✓${NC} System will rebuild font database automatically"
+        opt_msg "Font cache cleared"
+        opt_msg "System will rebuild font database automatically"
     else
         echo -e "  ${YELLOW}!${NC} Failed to clear font cache"
     fi
@@ -330,14 +354,18 @@ opt_startup_items_cleanup() {
                 fi
 
                 if [[ "$need_sudo" == "true" ]]; then
-                    sudo launchctl unload "$plist_file" 2> /dev/null || true
+                    if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+                        sudo launchctl unload "$plist_file" 2> /dev/null || true
+                    fi
                     if safe_sudo_remove "$plist_file"; then
                         ((broken_count++))
                     else
                         echo -e "  ${YELLOW}!${NC} Failed to remove (sudo) $plist_file"
                     fi
                 else
-                    launchctl unload "$plist_file" 2> /dev/null || true
+                    if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+                        launchctl unload "$plist_file" 2> /dev/null || true
+                    fi
                     if safe_remove "$plist_file" true; then
                         ((broken_count++))
                     else
@@ -374,23 +402,33 @@ opt_startup_items_cleanup() {
                 elif [[ -d "$HOME/Applications/$associated_bundle.app" ]]; then
                     app_path="$HOME/Applications/$associated_bundle.app"
                 else
-                    # Fallback to mdfind (slower but comprehensive, with 10s timeout)
-                    app_path=$(run_with_timeout 10 mdfind "kMDItemCFBundleIdentifier == '$associated_bundle'" 2> /dev/null | head -1 || echo "")
+                    # Try extracting app name from bundle ID (e.g., com.dropbox.Dropbox -> Dropbox)
+                    local app_name="${associated_bundle##*.}"
+                    if [[ -n "$app_name" && -d "/Applications/$app_name.app" ]]; then
+                        app_path="/Applications/$app_name.app"
+                    elif [[ -n "$app_name" && -d "$HOME/Applications/$app_name.app" ]]; then
+                        app_path="$HOME/Applications/$app_name.app"
+                    else
+                        # Fallback to mdfind (slower but comprehensive, with 10s timeout)
+                        app_path=$(run_with_timeout 10 mdfind "kMDItemCFBundleIdentifier == '$associated_bundle'" 2> /dev/null | head -1 || echo "")
+                    fi
                 fi
 
-                # If associated app is MISSING, this is an orphan
+                # CRITICAL FIX: Only consider it orphaned if BOTH conditions are true:
+                # 1. Associated app is not found
+                # 2. The program/executable itself also doesn't exist
                 if [[ -z "$app_path" ]]; then
                     if command -v should_protect_path > /dev/null && should_protect_path "$plist_file"; then
                         continue
                     fi
 
-                    # Get the helper tool path
-                    local program=""
-                    program=$(plutil -extract Program raw "$plist_file" 2> /dev/null || echo "")
-                    if [[ -z "$program" ]]; then
-                        program=$(plutil -extract ProgramArguments.0 raw "$plist_file" 2> /dev/null || echo "")
+                    # CRITICAL: Check if the program itself exists (reuse already extracted program path)
+                    # If the executable exists, this is NOT an orphan - it's a valid helper
+                    # whose app we just can't find (maybe mdfind indexing issue, non-standard location, etc.)
+                    if [[ -n "$program" && -e "$program" ]]; then
+                        debug_log "Keeping LaunchAgent (program exists): $plist_file -> $program"
+                        continue
                     fi
-                    program="${program/#\~/$HOME}"
 
                     # Double check we are not deleting system files
                     if [[ "$program" == /System/* ||
@@ -401,25 +439,26 @@ opt_startup_items_cleanup() {
                         continue
                     fi
 
+                    # Only delete if BOTH app and program are missing
+                    debug_log "Removing orphaned helper (app not found, program missing): $plist_file"
+
                     if [[ "$need_sudo" == "true" ]]; then
-                        sudo launchctl unload "$plist_file" 2> /dev/null || true
+                        if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+                            sudo launchctl unload "$plist_file" 2> /dev/null || true
+                        fi
                         # remove the plist
                         safe_sudo_remove "$plist_file"
 
-                        # AND remove the helper binary if it exists and is not protected
-                        if [[ -n "$program" && -f "$program" ]]; then
-                            safe_sudo_remove "$program"
-                        fi
+                        # The program doesn't exist (verified above), so no need to remove it
                         ((broken_count++))
-                        echo -e "  ${GREEN}✓${NC} Removed orphaned helper: $(basename "$program")"
+                        opt_msg "Removed orphaned helper: $(basename "$plist_file" .plist)"
                     else
-                        launchctl unload "$plist_file" 2> /dev/null || true
-                        safe_remove "$plist_file" true
-                        if [[ -n "$program" && -f "$program" ]]; then
-                            safe_remove "$program" true
+                        if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+                            launchctl unload "$plist_file" 2> /dev/null || true
                         fi
+                        safe_remove "$plist_file" true
                         ((broken_count++))
-                        echo -e "  ${GREEN}✓${NC} Removed orphaned helper: $(basename "$program")"
+                        opt_msg "Removed orphaned helper: $(basename "$plist_file" .plist)"
                     fi
                     continue
                 fi
@@ -432,14 +471,18 @@ opt_startup_items_cleanup() {
                 fi
 
                 if [[ "$need_sudo" == "true" ]]; then
-                    sudo launchctl unload "$plist_file" 2> /dev/null || true
+                    if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+                        sudo launchctl unload "$plist_file" 2> /dev/null || true
+                    fi
                     if safe_sudo_remove "$plist_file"; then
                         ((broken_count++))
                     else
                         echo -e "  ${YELLOW}!${NC} Failed to remove (sudo) $plist_file"
                     fi
                 else
-                    launchctl unload "$plist_file" 2> /dev/null || true
+                    if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+                        launchctl unload "$plist_file" 2> /dev/null || true
+                    fi
                     if safe_remove "$plist_file" true; then
                         ((broken_count++))
                     else
@@ -451,13 +494,13 @@ opt_startup_items_cleanup() {
     done
 
     if [[ $broken_count -gt 0 ]]; then
-        echo -e "  ${GREEN}✓${NC} Removed $broken_count broken startup items"
+        opt_msg "Removed $broken_count broken startup items"
     fi
 
     if [[ $total_count -gt 0 ]]; then
-        echo -e "  ${GREEN}✓${NC} Verified $total_count startup items"
+        opt_msg "Verified $total_count startup items"
     else
-        echo -e "  ${GREEN}✓${NC} No startup items found"
+        opt_msg "No startup items found"
     fi
 }
 
@@ -482,7 +525,7 @@ opt_dyld_cache_update() {
         local one_day_seconds=$((24 * 3600))
 
         if [[ $time_diff -lt $one_day_seconds ]]; then
-            echo -e "  ${GREEN}✓${NC} dyld shared cache already up-to-date"
+            opt_msg "dyld shared cache already up-to-date"
             return 0
         fi
     fi
@@ -493,13 +536,20 @@ opt_dyld_cache_update() {
 
     local success=false
     local exit_code=0
-    # This can take 1-2 minutes on some systems (180 second timeout)
-    set +e
-    run_with_timeout 180 sudo update_dyld_shared_cache -force > /dev/null 2>&1
-    exit_code=$?
-    set -e
-    if [[ $exit_code -eq 0 ]]; then
-        success=true
+
+    # Skip actual rebuild in dry-run mode
+    if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+        # This can take 1-2 minutes on some systems (180 second timeout)
+        set +e
+        run_with_timeout 180 sudo update_dyld_shared_cache -force > /dev/null 2>&1
+        exit_code=$?
+        set -e
+        if [[ $exit_code -eq 0 ]]; then
+            success=true
+        fi
+    else
+        success=true  # Assume success in dry-run mode
+        exit_code=0
     fi
 
     if [[ -t 1 ]]; then
@@ -507,8 +557,8 @@ opt_dyld_cache_update() {
     fi
 
     if [[ "$success" == "true" ]]; then
-        echo -e "  ${GREEN}✓${NC} dyld shared cache rebuilt"
-        echo -e "  ${GREEN}✓${NC} App launch speed improved"
+        opt_msg "dyld shared cache rebuilt"
+        opt_msg "App launch speed improved"
     elif [[ $exit_code -eq 124 ]]; then
         echo -e "  ${YELLOW}!${NC} dyld cache update timed out"
     else
@@ -519,35 +569,45 @@ opt_dyld_cache_update() {
 # System services refresh
 # Restarts system services to apply cache and configuration changes
 opt_system_services_refresh() {
+    local -a services=(
+        "cfprefsd:Preferences"
+        "lsd:LaunchServices"
+        "iconservicesagent:Icon Services"
+        "fontd:Font Server"
+    )
     local -a restarted_services=()
 
-    # cfprefsd - Preferences cache daemon (ensures fixed preferences take effect)
-    if killall -HUP cfprefsd 2> /dev/null; then
-        restarted_services+=("Preferences")
-    fi
+    # Skip actual service restarts in dry-run mode
+    if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+        for service_entry in "${services[@]}"; do
+            IFS=':' read -r process_name display_name <<< "$service_entry"
 
-    # lsd - LaunchServices daemon (ensures rebuild takes effect)
-    if killall lsd 2> /dev/null; then
-        restarted_services+=("LaunchServices")
-    fi
-
-    # iconservicesagent - Icon services (ensures cache refresh takes effect)
-    if killall iconservicesagent 2> /dev/null; then
-        restarted_services+=("Icon Services")
-    fi
-
-    # fontd - Font server (ensures font cache refresh takes effect)
-    if killall fontd 2> /dev/null; then
-        restarted_services+=("Font Server")
+            # Special handling for cfprefsd (use -HUP instead of normal kill)
+            if [[ "$process_name" == "cfprefsd" ]]; then
+                if killall -HUP "$process_name" 2> /dev/null; then
+                    restarted_services+=("$display_name")
+                fi
+            else
+                if killall "$process_name" 2> /dev/null; then
+                    restarted_services+=("$display_name")
+                fi
+            fi
+        done
+    else
+        # In dry-run mode, show all services that would be restarted
+        for service_entry in "${services[@]}"; do
+            IFS=':' read -r _ display_name <<< "$service_entry"
+            restarted_services+=("$display_name")
+        done
     fi
 
     if [[ ${#restarted_services[@]} -gt 0 ]]; then
-        echo -e "  ${GREEN}✓${NC} Refreshed ${#restarted_services[@]} system services"
+        opt_msg "Refreshed ${#restarted_services[@]} system services"
         for service in "${restarted_services[@]}"; do
             echo -e "    • $service"
         done
     else
-        echo -e "  ${GREEN}✓${NC} System services already optimal"
+        opt_msg "System services already optimal"
     fi
 }
 
@@ -573,13 +633,15 @@ opt_dock_refresh() {
         touch "$dock_plist" 2> /dev/null || true
     fi
 
-    # Restart Dock to apply changes
-    killall Dock 2> /dev/null || true
+    # Restart Dock to apply changes (skip in dry-run mode)
+    if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+        killall Dock 2> /dev/null || true
+    fi
 
     if [[ "$refreshed" == "true" ]]; then
-        echo -e "  ${GREEN}✓${NC} Dock cache cleared"
+        opt_msg "Dock cache cleared"
     fi
-    echo -e "  ${GREEN}✓${NC} Dock refreshed"
+    opt_msg "Dock refreshed"
 }
 
 # Execute optimization by action name

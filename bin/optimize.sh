@@ -26,6 +26,11 @@ print_header() {
 }
 
 run_system_checks() {
+    # Skip system checks in dry-run mode (only show what optimizations would run)
+    if [[ "${MOLE_DRY_RUN:-0}" == "1" ]]; then
+        return 0
+    fi
+
     unset AUTO_FIX_SUMMARY AUTO_FIX_DETAILS
     unset MOLE_SECURITY_FIXES_SHOWN
     unset MOLE_SECURITY_FIXES_SKIPPED
@@ -65,25 +70,33 @@ show_optimization_summary() {
     if ((safe_count == 0 && confirm_count == 0)) && [[ -z "${AUTO_FIX_SUMMARY:-}" ]]; then
         return
     fi
-    local summary_title="Optimization and Check Complete"
+
+    local summary_title
     local -a summary_details=()
-
     local total_applied=$((safe_count + confirm_count))
-    summary_details+=("Applied ${GREEN}${total_applied:-0}${NC} optimizations; all system services tuned")
-    summary_details+=("Updates, security and system health fully reviewed")
 
-    local summary_line4=""
-    if [[ -n "${AUTO_FIX_SUMMARY:-}" ]]; then
-        summary_line4="${AUTO_FIX_SUMMARY}"
-        if [[ -n "${AUTO_FIX_DETAILS:-}" ]]; then
-            local detail_join
-            detail_join=$(echo "${AUTO_FIX_DETAILS}" | paste -sd ", " -)
-            [[ -n "$detail_join" ]] && summary_line4+=" — ${detail_join}"
-        fi
+    if [[ "${MOLE_DRY_RUN:-0}" == "1" ]]; then
+        summary_title="Dry Run Complete - No Changes Made"
+        summary_details+=("Would apply ${YELLOW}${total_applied:-0}${NC} optimizations")
+        summary_details+=("Run without ${YELLOW}--dry-run${NC} to apply these changes")
     else
-        summary_line4="Your Mac is now faster and more responsive"
+        summary_title="Optimization and Check Complete"
+        summary_details+=("Applied ${GREEN}${total_applied:-0}${NC} optimizations; all system services tuned")
+        summary_details+=("Updates, security and system health fully reviewed")
+
+        local summary_line4=""
+        if [[ -n "${AUTO_FIX_SUMMARY:-}" ]]; then
+            summary_line4="${AUTO_FIX_SUMMARY}"
+            if [[ -n "${AUTO_FIX_DETAILS:-}" ]]; then
+                local detail_join
+                detail_join=$(echo "${AUTO_FIX_DETAILS}" | paste -sd ", " -)
+                [[ -n "$detail_join" ]] && summary_line4+=" — ${detail_join}"
+            fi
+        else
+            summary_line4="Your Mac is now faster and more responsive"
+        fi
+        summary_details+=("$summary_line4")
     fi
-    summary_details+=("$summary_line4")
 
     print_summary_block "$summary_title" "${summary_details[@]}"
 }
@@ -317,6 +330,9 @@ main() {
             "--debug")
                 export MO_DEBUG=1
                 ;;
+            "--dry-run")
+                export MOLE_DRY_RUN=1
+                ;;
             "--whitelist")
                 manage_whitelist "optimize"
                 exit 0
@@ -330,6 +346,12 @@ main() {
         clear
     fi
     print_header
+
+    # Show dry-run mode indicator
+    if [[ "${MOLE_DRY_RUN:-0}" == "1" ]]; then
+        echo -e "${YELLOW}${ICON_DRY_RUN} DRY RUN MODE${NC} - No files will be modified\n"
+    fi
+
     if ! command -v jq > /dev/null 2>&1; then
         echo -e "${YELLOW}${ICON_ERROR}${NC} Missing dependency: jq"
         echo -e "${GRAY}Install with: ${GREEN}brew install jq${NC}"
@@ -408,7 +430,9 @@ main() {
     done < "$opts_file"
 
     echo ""
-    ensure_sudo_session "System optimization requires admin access" || true
+    if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
+        ensure_sudo_session "System optimization requires admin access" || true
+    fi
 
     export FIRST_ACTION=true
     if [[ ${#safe_items[@]} -gt 0 ]]; then
