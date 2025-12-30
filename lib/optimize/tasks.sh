@@ -225,7 +225,6 @@ opt_sqlite_vacuum() {
     if [[ "${MOLE_DRY_RUN:-0}" != "1" && -t 1 ]]; then
         MOLE_SPINNER_PREFIX="  " start_inline_spinner "Optimizing databases..."
         spinner_started="true"
-        trap '[[ "${spinner_started:-false}" == "true" ]] && stop_inline_spinner' RETURN
     fi
 
     local -a db_paths=(
@@ -311,6 +310,10 @@ opt_sqlite_vacuum() {
             fi
         done < <(compgen -G "$pattern" || true)
     done
+
+    if [[ "$spinner_started" == "true" ]]; then
+        stop_inline_spinner
+    fi
 
     if [[ $vacuumed -gt 0 ]]; then
         opt_msg "Optimized $vacuumed databases for Mail, Safari, Messages"
@@ -428,7 +431,8 @@ opt_memory_pressure_relief() {
 # Network stack optimization
 # Flushes routing table and ARP cache to resolve network issues
 opt_network_stack_optimize() {
-    local success=0
+    local route_flushed="false"
+    local arp_flushed="false"
 
     if [[ "${MOLE_DRY_RUN:-0}" != "1" ]]; then
         local route_ok=true
@@ -448,21 +452,27 @@ opt_network_stack_optimize() {
 
         # Flush routing table
         if sudo route -n flush > /dev/null 2>&1; then
-            ((success++))
+            route_flushed="true"
         fi
 
         # Clear ARP cache
         if sudo arp -a -d > /dev/null 2>&1; then
-            ((success++))
+            arp_flushed="true"
         fi
     else
-        success=2
+        route_flushed="true"
+        arp_flushed="true"
     fi
 
-    if [[ $success -gt 0 ]]; then
+    if [[ "$route_flushed" == "true" ]]; then
         opt_msg "Network routing table refreshed"
+    fi
+    if [[ "$arp_flushed" == "true" ]]; then
         opt_msg "ARP cache cleared"
     else
+        if [[ "$route_flushed" == "true" ]]; then
+            return 0
+        fi
         echo -e "  ${YELLOW}!${NC} Failed to optimize network stack"
     fi
 }
