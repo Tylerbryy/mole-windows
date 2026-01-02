@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	titleStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#C79FD7")).Bold(true)
-	subtleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#737373"))
-	warnStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD75F"))
-	dangerStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5F5F")).Bold(true)
-	okStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#A5D6A7"))
-	lineStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#404040"))
+	titleStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#C79FD7")).Bold(true)
+	subtleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#737373"))
+	warnStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD75F"))
+	dangerStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5F5F")).Bold(true)
+	okStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#A5D6A7"))
+	lineStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#404040"))
 
 	primaryStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#BD93F9"))
 )
