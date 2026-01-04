@@ -81,8 +81,15 @@ setup() {
 }
 
 @test "network timeout prevents hanging (simulated)" {
+    if ! command -v gtimeout >/dev/null 2>&1 && ! command -v timeout >/dev/null 2>&1; then
+        skip "gtimeout/timeout not available"
+    fi
+
+    timeout_cmd="timeout"
+    command -v timeout >/dev/null 2>&1 || timeout_cmd="gtimeout"
+
     # shellcheck disable=SC2016
-    result=$(timeout 5 bash -c '
+    result=$($timeout_cmd 5 bash -c '
         result=$(curl -fsSL --connect-timeout 1 --max-time 2 "http://192.0.2.1:12345/test" 2>/dev/null || echo "failed")
         if [[ "$result" == "failed" ]]; then
             echo "timeout_works"

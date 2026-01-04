@@ -483,14 +483,21 @@ EOF
 }
 
 @test "clean_project_artifacts: scans and finds artifacts" {
+    if ! command -v gtimeout >/dev/null 2>&1 && ! command -v timeout >/dev/null 2>&1; then
+        skip "gtimeout/timeout not available"
+    fi
+
     mkdir -p "$HOME/www/test-project/node_modules/package1"
     echo "test data" > "$HOME/www/test-project/node_modules/package1/index.js"
 
     mkdir -p "$HOME/www/test-project"
 
+    timeout_cmd="timeout"
+    command -v timeout >/dev/null 2>&1 || timeout_cmd="gtimeout"
+
     run bash -c "
         export HOME='$HOME'
-        timeout 5 '$PROJECT_ROOT/bin/purge.sh' 2>&1 < /dev/null || true
+        $timeout_cmd 5 '$PROJECT_ROOT/bin/purge.sh' 2>&1 < /dev/null || true
     "
 
     [[ "$output" =~ "Scanning" ]] ||
@@ -511,17 +518,31 @@ EOF
 }
 
 @test "mo purge: accepts --debug flag" {
+    if ! command -v gtimeout >/dev/null 2>&1 && ! command -v timeout >/dev/null 2>&1; then
+        skip "gtimeout/timeout not available"
+    fi
+
+    timeout_cmd="timeout"
+    command -v timeout >/dev/null 2>&1 || timeout_cmd="gtimeout"
+
     run bash -c "
         export HOME='$HOME'
-        timeout 2 '$PROJECT_ROOT/mole' purge --debug < /dev/null 2>&1 || true
+        $timeout_cmd 2 '$PROJECT_ROOT/mole' purge --debug < /dev/null 2>&1 || true
     "
     true
 }
 
 @test "mo purge: creates cache directory for stats" {
+    if ! command -v gtimeout >/dev/null 2>&1 && ! command -v timeout >/dev/null 2>&1; then
+        skip "gtimeout/timeout not available"
+    fi
+
+    timeout_cmd="timeout"
+    command -v timeout >/dev/null 2>&1 || timeout_cmd="gtimeout"
+
     bash -c "
         export HOME='$HOME'
-        timeout 2 '$PROJECT_ROOT/mole' purge < /dev/null 2>&1 || true
+        $timeout_cmd 2 '$PROJECT_ROOT/mole' purge < /dev/null 2>&1 || true
     "
 
     [ -d "$HOME/.cache/mole" ] || [ -d "${XDG_CACHE_HOME:-$HOME/.cache}/mole" ]

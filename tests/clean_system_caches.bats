@@ -137,6 +137,10 @@ setup() {
 }
 
 @test "clean_project_caches handles timeout gracefully" {
+    if ! command -v gtimeout >/dev/null 2>&1 && ! command -v timeout >/dev/null 2>&1; then
+        skip "gtimeout/timeout not available"
+    fi
+
     mkdir -p "$HOME/test-project/.next"
 
     function find() {
@@ -145,7 +149,10 @@ setup() {
     }
     export -f find
 
-    run timeout 15 bash -c "
+    timeout_cmd="timeout"
+    command -v timeout >/dev/null 2>&1 || timeout_cmd="gtimeout"
+
+    run $timeout_cmd 15 bash -c "
         source '$PROJECT_ROOT/lib/core/common.sh'
         source '$PROJECT_ROOT/lib/clean/caches.sh'
         clean_project_caches
