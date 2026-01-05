@@ -255,9 +255,11 @@ Adds 5 commands: `clean`, `uninstall`, `optimize`, `analyze`, `status`. Mole aut
 
 ## Community Love
 
-Mole's development can not be without these Hackers. They contributed a lot of capabilities for Mole. Also, welcome to follow them! ❤️
+<a href="https://github.com/tw93/Mole/graphs/contributors">
+  <img src="CONTRIBUTORS.svg" width="1000" />
+</a>
 
-<img src="https://raw.githubusercontent.com/tw93/mole/main/CONTRIBUTORS.svg?sanitize=true" alt="Contributors" width="1000" />
+Mole's development can not be without these Hackers. They contributed a lot of capabilities for Mole. Also, welcome to follow them! ❤️
 
 Users from around the world are loving Mole! Join the community and share your experience.
 

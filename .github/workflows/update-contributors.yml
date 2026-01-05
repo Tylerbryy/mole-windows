@@ -32,15 +32,18 @@ jobs:
           svgWidth: 1000
           avatarSize: 72
           avatarMargin: 39
-          userNameHeight: 20
+          userNameHeight: 0
           noCommit: true
           includeBots: false
           excludeUsers: "github-actions web-flow dependabot claude"
           itemTemplate: |
             <g transform="translate({{ x }}, {{ y }})">
               <a xlink:href="{{{ url }}}" class="contributor-link" target="_blank" rel="nofollow sponsored" title="{{{ name }}}" id="{{{ name }}}">
-                <image width="{{ width }}" height="{{ height }}" xlink:href="{{{ avatar }}}" />
-                <text x="36" y="86" text-anchor="middle" alignment-baseline="middle" font-size="10">{{{ name }}}</text>
+                <clipPath id="circleView-{{ name }}">
+                  <circle cx="36" cy="36" r="36" />
+                </clipPath>
+                <image width="72" height="72" xlink:href="{{{ avatar }}}" clip-path="url(#circleView-{{ name }})" />
+                <text x="36" y="86" text-anchor="middle" alignment-baseline="middle" font-size="10" fill="#666" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">{{{ name }}}</text>
               </a>
             </g>
 
