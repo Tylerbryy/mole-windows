@@ -71,12 +71,12 @@ require_unzip_support() {
 
 # Test ZIP installer detection
 
-@test "is_installer_zip: rejects ZIP with installer content but too many entries" {
+@test "is_installer_zip: detects ZIP with installer content even with many entries" {
     if ! require_zip_support; then
         return 0
     fi
 
-    # Create a ZIP with too many files (exceeds MAX_ZIP_ENTRIES=5)
+    # Create a ZIP with many files (more than old MAX_ZIP_ENTRIES=5)
     # Include a .app file to have installer content
     mkdir -p "$HOME/Downloads/large-app"
     touch "$HOME/Downloads/large-app/MyApp.app"
@@ -96,7 +96,7 @@ require_unzip_support() {
     ' bash "$PROJECT_ROOT/bin/installer.sh"
 
     [ "$status" -eq 0 ]
-    [[ "$output" == "NOT_INSTALLER" ]]
+    [[ "$output" == "INSTALLER" ]]
 }
 
 @test "is_installer_zip: detects ZIP with app content" {
@@ -112,6 +112,71 @@ require_unzip_support() {
         export MOLE_TEST_MODE=1
         source "$1"
         if is_installer_zip "'"$HOME/Downloads/app.zip"'"; then
+            echo "INSTALLER"
+        else
+            echo "NOT_INSTALLER"
+        fi
+    ' bash "$PROJECT_ROOT/bin/installer.sh"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == "INSTALLER" ]]
+}
+
+@test "is_installer_zip: rejects ZIP when installer pattern appears after MAX_ZIP_ENTRIES" {
+    if ! require_zip_support; then
+        return 0
+    fi
+
+    # Create a ZIP where .app appears after the 50th entry
+    mkdir -p "$HOME/Downloads/deep-content"
+    # Create 51 regular files first
+    for i in {1..51}; do
+        touch "$HOME/Downloads/deep-content/file$i.txt"
+    done
+    # Add .app file at the end (52nd entry)
+    touch "$HOME/Downloads/deep-content/MyApp.app"
+    (cd "$HOME/Downloads" && zip -q -r deep.zip deep-content)
+
+    run bash -euo pipefail -c '
+        export MOLE_TEST_MODE=1
+        source "$1"
+        if is_installer_zip "'"$HOME/Downloads/deep.zip"'"; then
+            echo "INSTALLER"
+        else
+            echo "NOT_INSTALLER"
+        fi
+    ' bash "$PROJECT_ROOT/bin/installer.sh"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == "NOT_INSTALLER" ]]
+}
+
+@test "is_installer_zip: detects ZIP with real app bundle structure" {
+    if ! require_zip_support; then
+        return 0
+    fi
+
+    # Create a realistic .app bundle structure (directory, not just a file)
+    mkdir -p "$HOME/Downloads/RealApp.app/Contents/MacOS"
+    mkdir -p "$HOME/Downloads/RealApp.app/Contents/Resources"
+    echo "#!/bin/bash" > "$HOME/Downloads/RealApp.app/Contents/MacOS/RealApp"
+    chmod +x "$HOME/Downloads/RealApp.app/Contents/MacOS/RealApp"
+    cat > "$HOME/Downloads/RealApp.app/Contents/Info.plist" << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>RealApp</string>
+</dict>
+</plist>
+EOF
+    (cd "$HOME/Downloads" && zip -q -r realapp.zip RealApp.app)
+
+    run bash -euo pipefail -c '
+        export MOLE_TEST_MODE=1
+        source "$1"
+        if is_installer_zip "'"$HOME/Downloads/realapp.zip"'"; then
             echo "INSTALLER"
         else
             echo "NOT_INSTALLER"

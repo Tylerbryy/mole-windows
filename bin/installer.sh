@@ -43,7 +43,7 @@ readonly INSTALLER_SCAN_PATHS=(
     "$HOME/Library/Application Support/Telegram Desktop"
     "$HOME/Downloads/Telegram Desktop"
 )
-readonly MAX_ZIP_ENTRIES=5
+readonly MAX_ZIP_ENTRIES=50
 ZIP_LIST_CMD=()
 IN_ALT_SCREEN=0
 
@@ -55,7 +55,7 @@ fi
 
 TERMINAL_WIDTH=0
 
-# Check for installer payloads inside ZIP - single pass, fused size and pattern check
+# Check for installer payloads inside ZIP - check first N entries for installer patterns
 is_installer_zip() {
     local zip="$1"
     local cap="$MAX_ZIP_ENTRIES"
@@ -63,13 +63,10 @@ is_installer_zip() {
     [[ ${#ZIP_LIST_CMD[@]} -gt 0 ]] || return 1
 
     if ! "${ZIP_LIST_CMD[@]}" "$zip" 2> /dev/null |
-        head -n $((cap + 1)) |
-        awk -v cap="$cap" '
-            /\.(app|pkg|dmg|xip)(\/|$)/ { found=1 }
-            END {
-                if (NR > cap) exit 1
-                exit found ? 0 : 1
-            }
+        head -n "$cap" |
+        awk '
+            /\.(app|pkg|dmg|xip)(\/|$)/ { found=1; exit 0 }
+            END { exit found ? 0 : 1 }
         '; then
         return 1
     fi
