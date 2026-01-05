@@ -253,7 +253,7 @@ curl -fsSL https://raw.githubusercontent.com/tw93/Mole/main/scripts/setup-quick-
 
 Adds 5 commands: `clean`, `uninstall`, `optimize`, `analyze`, `status`. Mole automatically detects your terminal, or you can set `MO_LAUNCHER_APP=<name>` to override. For Raycast, if this is your first script directory, add it in Raycast Extensions (Add Script Directory) and then run "Reload Script Directories" to load the new commands.
 
-## Developers & Community Love
+## Community Love
 
 Mole's development can not be without these Hackers. They contributed a lot of capabilities for Mole. Also, welcome to follow them! ❤️
 
@@ -269,15 +269,15 @@ Users from around the world are loving Mole! Join the community and share your e
 
 ## Support
 
+- If Mole saved you space, consider starring the repo or [recommending it](https://twitter.com/intent/tweet?url=https://github.com/tw93/Mole&text=Mole%20-%20Deep%20clean%20and%20optimize%20your%20Mac.) to more friends.
+- Have ideas or fixes? Check our [Contributing Guide](CONTRIBUTING.md), then open an issue or PR to help shape Mole's future.
+- Love Mole? Treat Tw93 to a Coke via <a href="https://miaoyan.app/cats.html?name=Mole" target="_blank">this link</a> to keep the project growing.
+
 <details>
-<summary><strong>Sponsorship and Community</strong></summary>
+<summary><strong>These friends sent me a lot of Coke</strong></summary>
 <br/>
 <a href="https://miaoyan.app/cats.html?name=Mole"><img src="https://miaoyan.app/assets/sponsors.svg" width="1000px" /></a>
 </details>
-
-- If Mole saved you space, consider starring the repo or sharing it with friends who need a cleaner Mac.
-- Have ideas or fixes? Check our [Contributing Guide](CONTRIBUTING.md), then open an issue or PR to help shape Mole's future.
-- Love cats? Treat Tangyuan and Cola to canned food via <a href="https://miaoyan.app/cats.html?name=Mole" target="_blank">this link</a> to keep our mascots purring.
 
 ## License
 
