@@ -96,7 +96,7 @@ ask_for_updates() {
     fi
 
     echo ""
-    echo -e "${YELLOW}💡 To update, please run:${NC} ${GREEN}brew upgrade${NC}"
+    echo -e "${YELLOW}💡 Run ${GREEN}brew upgrade${YELLOW} to update${NC}"
 
     return 1
 }
