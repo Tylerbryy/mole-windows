@@ -30,6 +30,7 @@ func snapshotFromModel(m model) historyEntry {
 		Entries:       cloneDirEntries(m.entries),
 		LargeFiles:    cloneFileEntries(m.largeFiles),
 		TotalSize:     m.totalSize,
+		TotalFiles:    m.totalFiles,
 		Selected:      m.selected,
 		EntryOffset:   m.offset,
 		LargeSelected: m.largeSelected,
@@ -250,6 +251,7 @@ func saveCacheToDisk(path string, result scanResult) error {
 		Entries:    result.Entries,
 		LargeFiles: result.LargeFiles,
 		TotalSize:  result.TotalSize,
+		TotalFiles: result.TotalFiles,
 		ModTime:    info.ModTime(),
 		ScanTime:   time.Now(),
 	}
@@ -262,6 +264,29 @@ func saveCacheToDisk(path string, result scanResult) error {
 
 	encoder := gob.NewEncoder(file)
 	return encoder.Encode(entry)
+}
+
+// peekCacheTotalFiles attempts to read the total file count from cache,
+// ignoring expiration. Used for initial scan progress estimates.
+func peekCacheTotalFiles(path string) (int64, error) {
+	cachePath, err := getCachePath(path)
+	if err != nil {
+		return 0, err
+	}
+
+	file, err := os.Open(cachePath)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close() //nolint:errcheck
+
+	var entry cacheEntry
+	decoder := gob.NewDecoder(file)
+	if err := decoder.Decode(&entry); err != nil {
+		return 0, err
+	}
+
+	return entry.TotalFiles, nil
 }
 
 func invalidateCache(path string) {

@@ -251,6 +251,7 @@ func scanPathConcurrent(root string, filesScanned, dirsScanned, bytesScanned *in
 		Entries:    entries,
 		LargeFiles: largeFiles,
 		TotalSize:  total,
+		TotalFiles: atomic.LoadInt64(filesScanned),
 	}, nil
 }
 

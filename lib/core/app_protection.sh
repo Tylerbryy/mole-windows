@@ -85,8 +85,9 @@ readonly DATA_PROTECTED_BUNDLES=(
     "com.lastpass.*"  # LastPass
     "com.dashlane.*"  # Dashlane
     "com.bitwarden.*" # Bitwarden
-    "com.keepassx.*"  # KeePassXC
+    "com.keepassx.*"  # KeePassXC (Legacy)
     "org.keepassx.*"  # KeePassX
+    "org.keepassxc.*" # KeePassXC
     "com.authy.*"     # Authy
     "com.yubico.*"    # YubiKey Manager
 

@@ -88,6 +88,7 @@ clean_productivity_apps() {
     safe_clean ~/Library/Caches/com.orabrowser.app/* "Ora browser cache"
     safe_clean ~/Library/Caches/com.filo.client/* "Filo cache"
     safe_clean ~/Library/Caches/com.flomoapp.mac/* "Flomo cache"
+    safe_clean ~/Library/Application\ Support/Quark/Cache/videoCache/* "Quark video cache"
 }
 # Music/media players (protect Spotify offline music).
 clean_media_players() {
