@@ -494,7 +494,7 @@ remove_mole() {
             exit 1
         fi
 
-        log_admin "Attempting to uninstall Mole via Homebrew..."
+        log_info "Attempting to uninstall Mole via Homebrew..."
         local brew_uninstall_output
         if ! brew_uninstall_output=$("$brew_cmd" uninstall --force mole 2>&1); then
             has_error=true
