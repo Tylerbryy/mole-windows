@@ -82,20 +82,21 @@ check_for_updates() {
     ensure_user_file "$msg_cache"
 
     (
-        local latest
+        (
+            local latest
 
-        latest=$(get_latest_version_from_github)
-        if [[ -z "$latest" ]]; then
-            latest=$(get_latest_version)
-        fi
+            latest=$(get_latest_version_from_github)
+            if [[ -z "$latest" ]]; then
+                latest=$(get_latest_version)
+            fi
 
-        if [[ -n "$latest" && "$VERSION" != "$latest" && "$(printf '%s\n' "$VERSION" "$latest" | sort -V | head -1)" == "$VERSION" ]]; then
-            printf "\nUpdate available: %s → %s, run %smo update%s\n\n" "$VERSION" "$latest" "$GREEN" "$NC" > "$msg_cache"
-        else
-            echo -n > "$msg_cache"
-        fi
-    ) &
-    disown 2> /dev/null || true
+            if [[ -n "$latest" && "$VERSION" != "$latest" && "$(printf '%s\n' "$VERSION" "$latest" | sort -V | head -1)" == "$VERSION" ]]; then
+                printf "\nUpdate available: %s → %s, run %smo update%s\n\n" "$VERSION" "$latest" "$GREEN" "$NC" > "$msg_cache"
+            else
+                echo -n > "$msg_cache"
+            fi
+        ) > /dev/null 2>&1 < /dev/null &
+    )
 }
 
 show_update_notification() {
