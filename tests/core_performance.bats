@@ -117,7 +117,7 @@ setup() {
 
     elapsed=$(( (end - start) / 1000000 ))
 
-    [ "$elapsed" -lt 500 ]
+    [ "$elapsed" -lt 200 ]
 }
 
 @test "get_darwin_major caches correctly" {
