@@ -1,0 +1,75 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Mole Windows Configuration",
+    "description": "Default configuration for Mole Windows System Cleaner",
+
+    "cleanup": {
+        "tempFileAgeDays": 7,
+        "orphanAgeDays": 60,
+        "logAgeDays": 7,
+        "crashReportAgeDays": 7,
+        "savedStateAgeDays": 30,
+        "recentFilesAgeDays": 30,
+        "prefetchAgeDays": 14
+    },
+
+    "categories": {
+        "user": {
+            "enabled": true,
+            "tempFiles": true,
+            "recycleBin": true,
+            "recentFiles": true,
+            "explorerCache": true,
+            "crashDumps": true,
+            "clipboardHistory": true
+        },
+        "browsers": {
+            "enabled": true,
+            "chrome": true,
+            "edge": true,
+            "firefox": true,
+            "brave": true,
+            "opera": true,
+            "vivaldi": true
+        },
+        "devTools": {
+            "enabled": true,
+            "npm": true,
+            "pip": true,
+            "cargo": true,
+            "go": true,
+            "gradle": true,
+            "maven": true,
+            "docker": true,
+            "ide": true,
+            "frontend": true,
+            "cloud": true
+        },
+        "windows": {
+            "enabled": true,
+            "windowsUpdate": true,
+            "systemTemp": true,
+            "errorReports": true,
+            "dnsCache": true,
+            "prefetch": true,
+            "memoryDumps": true,
+            "deliveryOptimization": true,
+            "storeCache": true
+        }
+    },
+
+    "behavior": {
+        "confirmBeforeClean": true,
+        "showDryRunByDefault": false,
+        "warnIfBrowserRunning": true,
+        "parallelJobs": "auto",
+        "logLevel": "info"
+    },
+
+    "ui": {
+        "showBanner": true,
+        "useColors": true,
+        "showProgress": true,
+        "verboseOutput": false
+    }
+}

@@ -1,0 +1,207 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Mole Protected Paths Configuration",
+    "description": "Critical system paths and protected application patterns for Windows",
+
+    "criticalSystemPaths": {
+        "description": "Paths that must NEVER be deleted under any circumstances",
+        "paths": [
+            "%SystemRoot%",
+            "%SystemRoot%\\System32",
+            "%SystemRoot%\\SysWOW64",
+            "%SystemRoot%\\WinSxS",
+            "%SystemDrive%\\Recovery",
+            "%ProgramFiles%",
+            "%ProgramFiles(x86)%",
+            "%SystemRoot%\\Boot",
+            "%SystemRoot%\\Fonts",
+            "%SystemRoot%\\INF",
+            "%SystemRoot%\\PolicyDefinitions",
+            "%SystemRoot%\\Security",
+            "%SystemRoot%\\servicing",
+            "%SystemRoot%\\SoftwareDistribution\\DataStore",
+            "%USERPROFILE%\\Documents",
+            "%USERPROFILE%\\Pictures",
+            "%USERPROFILE%\\Videos",
+            "%USERPROFILE%\\Music",
+            "%USERPROFILE%\\Desktop",
+            "%USERPROFILE%\\Downloads",
+            "%APPDATA%\\Microsoft\\Windows\\Start Menu",
+            "%APPDATA%\\Microsoft\\Windows\\SendTo",
+            "%APPDATA%\\Microsoft\\Windows\\Templates",
+            "%APPDATA%\\Microsoft\\Credentials",
+            "%LOCALAPPDATA%\\Microsoft\\Credentials",
+            "%APPDATA%\\Microsoft\\Crypto",
+            "%APPDATA%\\Microsoft\\Protect",
+            "%APPDATA%\\Microsoft\\SystemCertificates"
+        ]
+    },
+
+    "protectedPatterns": {
+        "description": "Application patterns that should be protected during cleanup (data preservation)",
+        "categories": {
+            "passwordManagers": [
+                "*1password*",
+                "*LastPass*",
+                "*Dashlane*",
+                "*Bitwarden*",
+                "*KeePass*",
+                "*Authy*",
+                "*YubiKey*"
+            ],
+            "developmentIDEs": [
+                "*JetBrains*",
+                "*IntelliJ*",
+                "*PyCharm*",
+                "*WebStorm*",
+                "*GoLand*",
+                "*DataGrip*",
+                "*Rider*",
+                "*CLion*",
+                "*PhpStorm*",
+                "*RubyMine*",
+                "*Code\\User*",
+                "*Code\\Workspaces*",
+                "*Sublime Text*",
+                "*Sublime Merge*"
+            ],
+            "aiTools": [
+                "*Claude*",
+                "*ChatGPT*",
+                "*Ollama*",
+                "*LM Studio*",
+                "*Cursor*",
+                "*Copilot*"
+            ],
+            "databaseClients": [
+                "*TablePlus*",
+                "*DBeaver*",
+                "*Navicat*",
+                "*MongoDB Compass*",
+                "*Redis*",
+                "*pgAdmin*",
+                "*HeidiSQL*",
+                "*Azure Data Studio*"
+            ],
+            "apiTools": [
+                "*Postman*",
+                "*Insomnia*",
+                "*Fiddler*",
+                "*Charles*",
+                "*Proxyman*"
+            ],
+            "gitClients": [
+                "*GitHub Desktop*",
+                "*SourceTree*",
+                "*GitKraken*",
+                "*Tower*",
+                "*Fork*"
+            ],
+            "terminals": [
+                "*Windows Terminal*",
+                "*Hyper*",
+                "*Alacritty*",
+                "*WezTerm*",
+                "*Tabby*"
+            ],
+            "virtualization": [
+                "*Docker*",
+                "*VirtualBox*",
+                "*VMware*",
+                "*Hyper-V*",
+                "*WSL*"
+            ],
+            "vpnProxy": [
+                "*NordVPN*",
+                "*ExpressVPN*",
+                "*ProtonVPN*",
+                "*OpenVPN*",
+                "*WireGuard*",
+                "*Tailscale*",
+                "*Cloudflare*"
+            ],
+            "cloudStorage": [
+                "*OneDrive*",
+                "*Dropbox*",
+                "*Google Drive*",
+                "*iCloud*",
+                "*Box*",
+                "*pCloud*"
+            ],
+            "communication": [
+                "*Discord*",
+                "*Slack*",
+                "*Teams*",
+                "*Zoom*",
+                "*Telegram*",
+                "*WhatsApp*",
+                "*Signal*"
+            ],
+            "noteTaking": [
+                "*Obsidian*",
+                "*Notion*",
+                "*Logseq*",
+                "*Evernote*",
+                "*OneNote*",
+                "*Typora*",
+                "*Roam*"
+            ],
+            "design": [
+                "*Adobe*",
+                "*Figma*",
+                "*Sketch*",
+                "*Affinity*",
+                "*Canva*"
+            ],
+            "media": [
+                "*Spotify*",
+                "*VLC*",
+                "*iTunes*",
+                "*Plex*"
+            ],
+            "backup": [
+                "*Backblaze*",
+                "*Acronis*",
+                "*Veeam*",
+                "*Carbonite*"
+            ],
+            "browserProfiles": [
+                "*Chrome\\User Data\\Default\\Bookmarks*",
+                "*Chrome\\User Data\\Default\\Preferences*",
+                "*Chrome\\User Data\\Default\\Login Data*",
+                "*Edge\\User Data\\Default\\Bookmarks*",
+                "*Edge\\User Data\\Default\\Preferences*",
+                "*Edge\\User Data\\Default\\Login Data*",
+                "*Firefox\\Profiles*",
+                "*Brave*\\User Data\\Default\\Bookmarks*"
+            ]
+        }
+    },
+
+    "safeCachePatterns": {
+        "description": "Paths that are safe to clean (known caches)",
+        "patterns": [
+            "%TEMP%\\*",
+            "%LOCALAPPDATA%\\Temp\\*",
+            "%SystemRoot%\\Temp\\*",
+            "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\*\\Cache*",
+            "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\*\\Code Cache*",
+            "%LOCALAPPDATA%\\Google\\Chrome\\User Data\\*\\GPUCache*",
+            "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\*\\Cache*",
+            "%LOCALAPPDATA%\\Microsoft\\Edge\\User Data\\*\\Code Cache*",
+            "%LOCALAPPDATA%\\BraveSoftware\\Brave-Browser\\User Data\\*\\Cache*",
+            "%LOCALAPPDATA%\\Microsoft\\Windows\\Explorer\\thumbcache_*.db",
+            "%LOCALAPPDATA%\\Microsoft\\Windows\\INetCache\\*",
+            "%LOCALAPPDATA%\\Microsoft\\Windows\\WebCache\\*",
+            "%LOCALAPPDATA%\\Microsoft\\Windows\\Caches\\*",
+            "%SystemRoot%\\SoftwareDistribution\\Download\\*",
+            "%LOCALAPPDATA%\\Microsoft\\Windows\\WER\\*",
+            "%ProgramData%\\Microsoft\\Windows\\WER\\*",
+            "%LOCALAPPDATA%\\npm-cache\\*",
+            "%LOCALAPPDATA%\\pip\\Cache\\*",
+            "%LOCALAPPDATA%\\NuGet\\v3-cache\\*",
+            "%USERPROFILE%\\.cargo\\registry\\cache\\*",
+            "%USERPROFILE%\\.gradle\\caches\\*"
+        ]
+    }
+}
